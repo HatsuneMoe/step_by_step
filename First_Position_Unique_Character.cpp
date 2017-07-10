@@ -10,13 +10,13 @@ using std::string;
 class Solution {
 public:
     int firstUniqChar(string s) {
-        unordered_map<char, int> count_table;
+        int count[256] = {0};
 
-        for(auto item :s)
-            count_table[item]++;
+        for(auto &item :s)
+            count[(int)item]++;
 
         for(int index=0; index<s.size(); index++)
-            if(count_table[s[index]] == 1)
+            if(count[(int)s[index]] == 1)
                 return index;
 
         return -1;
