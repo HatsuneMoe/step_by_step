@@ -44,6 +44,33 @@ public:
     }
 };
 
+
+class Solution_lite {
+public:
+    vector<int> majorityElement(vector<int>& nums) {
+        vector<int> result;
+        int res_1, res_2;
+        int c_res_1 = 0, c_res_2 = 0;
+        for (auto i : nums){
+            if (i == res_1) c_res_1++;
+            else if (i == res_2) c_res_2++;
+            else if (c_res_1 == 0){res_1 = i; c_res_1=1;}
+            else if (c_res_2 == 0){res_2 = i; c_res_2=1;}
+            else {c_res_1--; c_res_2--;}
+        }
+
+        c_res_1 = c_res_2 = 0;
+        for (auto i : nums){
+            if(i == res_1) c_res_1++;
+            if(i == res_2) c_res_2++;
+        }
+        if (c_res_1 > nums.size() / 3) result.push_back(res_1);
+        if (c_res_2 > nums.size() / 3) result.push_back(res_2);
+        return result;
+    }
+};
+
+
 int main()
 {
     Solution A;
