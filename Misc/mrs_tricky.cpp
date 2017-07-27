@@ -56,7 +56,7 @@ float k_sqrt(float x)
 	 * assume σ = 0.0430357
 	 * Magic number is 532496103 (0x1FBD3EE7)
 	 * guess g0 for init
-	 * do while approximations
+	 * newton's method
 	 */
 	float xhalf = 0.5f * x;
 	int i = *(int*)&x;
@@ -98,7 +98,15 @@ int nm_sqrt(unsigned x)
 	return g0;
 }
 
-// todo : 64bit k_sqrt
+double k_sqrt(double x)
+{
+	double xhalf = 0.5f * x;
+	__int64  i = *(__int64 *)&x;
+	i = 0x1FF7A7DCE61F8429 + (i >> 1); //2303494301618766889.7726464
+	x = *(double*)&i;
+	x = x * 0.5f + (xhalf / x);
+	return x;
+}
 #endif 
 
 int sign(int i)
