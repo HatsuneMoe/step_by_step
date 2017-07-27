@@ -44,6 +44,27 @@ int nm_sqrt(unsigned x)
 	}
 	return g0;
 }
+
+float k_sqrt(float x)
+{
+	/*
+	 * a float num: (-1)^S + (1+m) * 2^e
+	 * m = M/L   e = E-B   
+	 * f(y) = y^2 - x
+	 * log_2(1+x) ≈ x + σ
+	 * I_y = 0.5*I_x + 0.5*(B-σ)L
+	 * assume σ = 0.0430357
+	 * Magic number is 532496103 (0x1FBD3EE7)
+	 * guess g0 for init
+	 * do while approximations
+	 */
+	float xhalf = 0.5f * x;
+	int i = *(int*)&x;
+	i = 0x1FBD3EE7 + (i >> 1);
+	x = *(float*)&i;
+	x = x * 0.5f + (xhalf / x);
+	return x;
+}
 #else 
 int abs(int i)
 {
@@ -76,6 +97,8 @@ int nm_sqrt(unsigned x)
 	}
 	return g0;
 }
+
+// todo : 64bit k_sqrt
 #endif 
 
 int sign(int i)
