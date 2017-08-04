@@ -1,0 +1,118 @@
+import logging
+import asyncio
+import aiohttp
+import urllib.parse
+from asyncio import Queue
+
+
+class Crawler:
+    def __init__(self,
+                 max_retries=3, loop=None,
+                 max_tasks=1, max_redirect=10):
+        self.max_retries = max_retries
+        self.max_tasks = max_tasks
+        self.max_redirect = max_redirect
+        self.seen_urls = set()
+        self.loop = loop or asyncio.get_event_loop()
+        self.q = Queue(loop=self.loop)
+        self.session = aiohttp.ClientSession(loop=self.loop)
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="[%(asctime)s] %(name)s:%(levelname)s: %(message)s"
+        )
+
+    async def fetch(self, url, **kwargs):
+        retries = 0
+        logging.info("Preparing for fetching html {}".format(url))
+        while retries < self.max_retries:
+            try:
+                resp = await self.session.get(url, **kwargs)
+                print(await resp.text())
+                if retries > 1:
+                    logging.info('try {} for {} success'.format(retries, url))
+                break
+            except aiohttp.client_exceptions as e:
+                print(e)
+
+            retries += 1
+
+    def close(self):
+        self.session.close()
+
+    async def work(self):
+        try:
+            while True:
+                url, max_redirect = await self.q.get()
+                assert url in self.seen_urls
+                await self.fetch(url)
+                self.q.task_done()
+        except asyncio.CancelledError:
+            pass
+
+    @staticmethod
+    def url_check(url):
+        parts = urllib.parse.urlparse(url)
+        if parts.scheme not in ('http', 'https'):
+            logging.debug('skipping non-http scheme in {}'.format(url))
+            return False
+        return True
+
+    def add_url(self, url, max_redirect=None):
+        if max_redirect is None:
+            max_redirect = self.max_redirect
+        logging.info('adding {} {}'.format(url, max_redirect))
+        if self.url_check(url):
+            self.seen_urls.add(url)
+            self.q.put_nowait((url, max_redirect))
+        else:
+            logging.info('adding {} {} failed'.format(url, max_redirect))
+
+    def add_url_from_file(self, file_path, max_redirect=None):
+        if max_redirect is None:
+            max_redirect = self.max_redirect
+        with open(file_path, "r") as _f:
+            lines = _f.readlines()
+            for url in lines:
+                logging.info('adding {} {}'.format(url, max_redirect))
+                if self.url_check(url):
+                    self.seen_urls.add(url)
+                    self.q.put_nowait((url, max_redirect))
+                else:
+                    logging.info('adding {} {} failed'.format(url, max_redirect))
+
+    async def run_work(self):
+        workers = [asyncio.Task(self.work(), loop=self.loop)
+                   for _ in range(self.max_tasks)]
+        await self.q.join()
+        for w in workers:
+            w.cancel()
+
+
+def test():
+    a = Crawler()
+    _loop = asyncio.get_event_loop()
+    a.add_url("https://www.baidu.com")
+    try:
+        _loop.run_until_complete(a.run_work())
+    except KeyboardInterrupt:
+        logging.debug('\nInterrupted\n')
+    finally:
+        a.close()
+
+        _loop.stop()
+        _loop.run_forever()
+
+        _loop.close()
+
+test()
+
+
+
+
+
+
+
+
+
+
+
