@@ -4,11 +4,16 @@ import aiohttp
 import urllib.parse
 from asyncio import Queue
 
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="[%(asctime)s] %(name)s:%(levelname)s: %(message)s"
+)
 
-class Crawler:
+
+class CrawlerBase:
     def __init__(self,
                  max_retries=3, loop=None,
-                 max_tasks=1, max_redirect=10):
+                 max_tasks=3, max_redirect=1):
         self.max_retries = max_retries
         self.max_tasks = max_tasks
         self.max_redirect = max_redirect
@@ -16,10 +21,6 @@ class Crawler:
         self.loop = loop or asyncio.get_event_loop()
         self.q = Queue(loop=self.loop)
         self.session = aiohttp.ClientSession(loop=self.loop)
-        logging.basicConfig(
-            level=logging.DEBUG,
-            format="[%(asctime)s] %(name)s:%(levelname)s: %(message)s"
-        )
 
     async def fetch(self, url, **kwargs):
         retries = 0
@@ -27,14 +28,17 @@ class Crawler:
         while retries < self.max_retries:
             try:
                 resp = await self.session.get(url, **kwargs)
-                print(await resp.text())
+                # self.parse_resp(await self.session.get(url, **kwargs))
                 if retries > 1:
                     logging.info('try {} for {} success'.format(retries, url))
-                break
+                return await resp.text()  # break
             except aiohttp.client_exceptions as e:
                 print(e)
 
             retries += 1
+
+    def parse_resp(self, resp):
+        raise NotImplementedError
 
     def close(self):
         self.session.close()
@@ -44,7 +48,9 @@ class Crawler:
             while True:
                 url, max_redirect = await self.q.get()
                 assert url in self.seen_urls
-                await self.fetch(url)
+                resp = await self.fetch(url)
+                self.parse_resp(resp)
+                await self.sleep()
                 self.q.task_done()
         except asyncio.CancelledError:
             pass
@@ -87,26 +93,9 @@ class Crawler:
         for w in workers:
             w.cancel()
 
-
-def test():
-    a = Crawler()
-    _loop = asyncio.get_event_loop()
-    a.add_url("https://www.baidu.com")
-    try:
-        _loop.run_until_complete(a.run_work())
-    except KeyboardInterrupt:
-        logging.debug('\nInterrupted\n')
-    finally:
-        a.close()
-
-        _loop.stop()
-        _loop.run_forever()
-
-        _loop.close()
-
-test()
-
-
+    @staticmethod
+    async def sleep():
+        await asyncio.sleep(1)
 
 
 

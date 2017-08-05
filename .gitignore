@@ -1,4 +1,6 @@
 ## folder
 .idea/
 cmake-build-debug/
+__pycache__/
 CMakeLists.txt
+result.json
