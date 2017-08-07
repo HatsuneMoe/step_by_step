@@ -12,63 +12,45 @@ class Crawler(CrawlerBase):
         self.result = list()
 
     def parse_resp(self, resp):
-
+        def get_content(obj, selector_str, return_func=lambda x: x.get_text()):
+            _t = obj.select(selector_str)
+            return return_func(_t[0]) if len(_t) > 0 else None
 
         try:
             soup = BeautifulSoup(resp, 'lxml')
             _list = soup.select("#h-content > div.uk-container > div.h-threads-list > div")
             for child in _list:
-                _img = child.select("div.h-threads-item-main > div.h-threads-img-box > a")
-                img = _img[0]["href"] if len(_img) > 0 else None
-
-                _title = child.select("div.h-threads-item-main > div.h-threads-info > span.h-threads-info-title")
-                title = _title[0].get_text().strip() if len(_title) > 0 else None
-
-                _time = child.select("div.h-threads-item-main > div.h-threads-info > span.h-threads-info-createdat")
-                time = _time[0].get_text() if len(_time) > 0 else None
-
-                _uid = child.select("div.h-threads-item-main > div.h-threads-info > span.h-threads-info-uid")
-                uid = _uid[0].get_text() if len(_uid) > 0 else None
-
-                _id = child.select("div.h-threads-item-main > div.h-threads-info > a.h-threads-info-id")
-                id = _id[0].get_text() if len(_id) > 0 else None
-
-                href = _id[0]["href"] if id else None
-
-                _content = child.select("div.h-threads-item-main > div.h-threads-content")
-                content = _content[0].get_text().strip() if len(_content) > 0 else None
-
-                _replys = child.select("div.h-threads-item-replys")
-                replys = _replys[0] if len(_replys) > 0 else None
+                img = get_content(child, "div.h-threads-item-main > div.h-threads-img-box > a", lambda x: x['href'])
+                title = get_content(child, "div.h-threads-item-main > div.h-threads-info > span.h-threads-info-title",
+                                    lambda x: x.get_text().strip())
+                time = get_content(child, "div.h-threads-item-main > div.h-threads-info > span.h-threads-info-createdat")
+                uid = get_content(child, "div.h-threads-item-main > div.h-threads-info > span.h-threads-info-uid")
+                id = get_content(child, "div.h-threads-item-main > div.h-threads-info > a.h-threads-info-id")
+                href = get_content(child, "div.h-threads-item-main > div.h-threads-info > a.h-threads-info-id",
+                                   lambda x: x['href'])
+                content = get_content(child, "div.h-threads-item-main > div.h-threads-content",
+                                      lambda x: x.get_text().strip())
+                replys = get_content(child, "div.h-threads-item-replys", lambda x: x)
 
                 replys_list = list()
                 if replys and replys.children:
                     for _child in replys.children:
                         if not isinstance(_child, bs4.element.Tag):
                             continue
-
-                        _reply_img = _child.select("div.h-threads-item-reply-main > div.h-threads-img-box > a")
-                        reply_img = _reply_img[0]["href"] if len(_reply_img) > 0 else None
-
-                        _reply_title = _child.select(
-                            "div.h-threads-item-reply-main > div.h-threads-info > span.h-threads-info-title")
-                        reply_title = _reply_title[0].get_text().strip() if len(_reply_title) > 0 else None
-
-                        _reply_time = _child.select(
-                            "div.h-threads-item-reply-main > div.h-threads-info > span.h-threads-info-createdat")
-                        reply_time = _reply_time[0].get_text() if len(_reply_time) > 0 else None
-
-                        _reply_uid = _child.select(
-                            "div.h-threads-item-reply-main > div.h-threads-info > span.h-threads-info-uid")
-                        reply_uid = _reply_uid[0].get_text() if len(_reply_uid) > 0 else None
-
-                        _reply_id = _child.select("div.h-threads-item-reply-main > div.h-threads-info > a.h-threads-info-id")
-                        reply_id = _reply_id[0].get_text() if len(_reply_id) > 0 else None
-
-                        reply_href = _reply_id[0]["href"] if reply_id else None
-
-                        _reply_content = _child.select("div.h-threads-item-reply-main > div.h-threads-content")
-                        reply_content = _reply_content[0].get_text().strip() if len(_reply_content) > 0 else None
+                        reply_img = get_content(_child, "div.h-threads-item-reply-main > div.h-threads-img-box > a",
+                                                lambda x: x['href'])
+                        reply_title = get_content(_child, "div.h-threads-item-reply-main > div.h-threads-info >"
+                                                          " span.h-threads-info-title", lambda x: x.get_text().strip())
+                        reply_time = get_content(_child, "div.h-threads-item-reply-main > div.h-threads-info > "
+                                                         "span.h-threads-info-createdat")
+                        reply_uid = get_content(_child, "div.h-threads-item-reply-main > div.h-threads-info >"
+                                                        " span.h-threads-info-uid")
+                        reply_id = get_content(_child, "div.h-threads-item-reply-main > div.h-threads-info >"
+                                                       " a.h-threads-info-id")
+                        reply_href = get_content(_child, "div.h-threads-item-reply-main > div.h-threads-info >"
+                                                         " a.h-threads-info-id", lambda x: x['href'])
+                        reply_content = get_content(_child, "div.h-threads-item-reply-main > div.h-threads-content", 
+                                                    lambda x: x.get_text().strip())
 
                         replys_list.append({
                             "reply_img": reply_img,
